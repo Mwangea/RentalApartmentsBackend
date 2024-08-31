@@ -11,6 +11,9 @@ namespace RentalAppartments.Models
         public Lease Lease { get; set; }
 
         [Required]
+        public int PropertyId { get; set; }
+
+        [Required]
         public string TenantId { get; set; }
         public User Tenant { get; set; }
 
@@ -32,5 +35,9 @@ namespace RentalAppartments.Models
         public DateTime? LastUpdated { get; set; }
 
         public string Notes { get; set; }
+
+        // Navigation properties
+       // public User Tenant { get; set; }
+        public Property Property { get; set; }
     }
 }

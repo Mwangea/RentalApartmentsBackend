@@ -22,20 +22,27 @@ namespace RentalAppartments.Models
         public decimal RentAmount { get; set; }
 
         public int Bedrooms { get; set; }
+
         public int Bathrooms { get; set; }
+
         public decimal SquareFootage { get; set; }
 
         public bool IsAvailable { get; set; }
 
+        [StringLength(50)]
+        public string Status { get; set; }
+
         public DateTime CreatedAt { get; set; }
+
         public DateTime? LastUpdated { get; set; }
 
-        [Required]
-        //public int LandlordId { get; set; }
-        public User Landlord { get; set; }
+        public string? CurrentTenantId { get; set; }
 
         // Navigation properties
+        public User Landlord { get; set; }
+        public User? CurrentTenant { get; set; }
         public ICollection<Lease> Leases { get; set; }
         public ICollection<MaintenanceRequest> MaintenanceRequests { get; set; }
+        public ICollection<Payment> Payments { get; set; }
     }
 }
