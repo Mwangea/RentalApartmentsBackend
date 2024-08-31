@@ -1,1 +1,1 @@
-# RentalAppartments
+# RentalApartments
