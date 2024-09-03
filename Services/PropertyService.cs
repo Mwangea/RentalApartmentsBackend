@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using RentalAppartments.Data;
 using RentalAppartments.DTOs;
 using RentalAppartments.Interfaces;
@@ -6,8 +7,7 @@ using RentalAppartments.Models;
 
 namespace RentalAppartments.Services
 {
-    public class PropertyService: IPropertyService
-
+    public class PropertyService : IPropertyService
     {
         private readonly ApplicationDbContext _context;
 
@@ -43,8 +43,10 @@ namespace RentalAppartments.Services
                 Bedrooms = propertyDto.Bedrooms,
                 Bathrooms = propertyDto.Bathrooms,
                 SquareFootage = propertyDto.SquareFootage,
-                IsAvailable = propertyDto.IsAvailable,
-                CreatedAt = DateTime.UtcNow
+                IsAvailable = true,
+                Status = "Available",
+                CreatedAt = DateTime.UtcNow,
+                ImageUrls = JsonSerializer.Serialize(propertyDto.ImageUrls ?? new List<string>())
             };
 
             _context.Properties.Add(property);
@@ -71,7 +73,9 @@ namespace RentalAppartments.Services
             property.Bathrooms = propertyDto.Bathrooms;
             property.SquareFootage = propertyDto.SquareFootage;
             property.IsAvailable = propertyDto.IsAvailable;
+            property.Status = propertyDto.Status;
             property.LastUpdated = DateTime.UtcNow;
+            property.ImageUrls = JsonSerializer.Serialize(propertyDto.ImageUrls ?? new List<string>());
 
             await _context.SaveChangesAsync();
 
@@ -104,11 +108,7 @@ namespace RentalAppartments.Services
             if (role != "Admin" && (role != "Landlord" || property.LandlordId != userId))
                 throw new UnauthorizedAccessException("You don't have permission to update images for this property.");
 
-            // Assuming you have a separate table or field for storing image URLs
-            // You'll need to implement this part based on your data model
-            // For example:
-            // property.ImageUrls = imageUrls;
-
+            property.ImageUrls = JsonSerializer.Serialize(imageUrls);
             property.LastUpdated = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
@@ -143,6 +143,7 @@ namespace RentalAppartments.Services
                 throw new UnauthorizedAccessException("You don't have permission to update the status of this property.");
 
             property.Status = newStatus;
+            property.IsAvailable = (newStatus == "Available");
             property.LastUpdated = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
@@ -200,10 +201,11 @@ namespace RentalAppartments.Services
                 Bathrooms = property.Bathrooms,
                 SquareFootage = property.SquareFootage,
                 IsAvailable = property.IsAvailable,
+                Status = property.Status,
                 CreatedAt = property.CreatedAt,
                 LastUpdated = property.LastUpdated,
-                // Assuming you have a way to get image URLs
-                // ImageUrls = property.ImageUrls
+                CurrentTenantId = property.CurrentTenantId,
+                ImageUrls = JsonSerializer.Deserialize<List<string>>(property.ImageUrls ?? "[]")
             };
         }
     }

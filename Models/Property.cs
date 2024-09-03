@@ -38,6 +38,8 @@ namespace RentalAppartments.Models
 
         public string? CurrentTenantId { get; set; }
 
+        public string ImageUrls { get; set; } // Store as JSON string
+
         // Navigation properties
         public User Landlord { get; set; }
         public User? CurrentTenant { get; set; }

@@ -29,7 +29,7 @@ namespace RentalAppartments.DTOs
 
         public bool IsAvailable { get; set; }
 
-        public string Status { get; set; } // New field for property status
+        public string Status { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
@@ -37,6 +37,6 @@ namespace RentalAppartments.DTOs
 
         public List<string> ImageUrls { get; set; }
 
-        public string? CurrentTenantId { get; set; } // New field to track current tenant
+        public string? CurrentTenantId { get; set; }
     }
 }

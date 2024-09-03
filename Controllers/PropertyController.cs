@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Metadata;
 using RentalAppartments.DTOs;
 using RentalAppartments.Interfaces;
 using System.Security.Claims;
@@ -9,7 +8,7 @@ namespace RentalAppartments.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class PropertyController: ControllerBase
+    public class PropertyController : ControllerBase
     {
         private readonly IPropertyService _propertyService;
 
@@ -42,8 +41,19 @@ namespace RentalAppartments.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
-            var newProperty = await _propertyService.AddPropertyAsync(propertyDto, userId, role);
-            return CreatedAtAction(nameof(GetProperty), new { id = newProperty.Id }, newProperty);
+            try
+            {
+                var newProperty = await _propertyService.AddPropertyAsync(propertyDto, userId, role);
+                return CreatedAtAction(nameof(GetProperty), new { id = newProperty.Id }, newProperty);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"An error occurred: {ex.Message}");
+            }
         }
 
         [Authorize(Roles = "Admin,Landlord")]
@@ -53,11 +63,22 @@ namespace RentalAppartments.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
-            var updatedProperty = await _propertyService.UpdatePropertyAsync(id, propertyDto, userId, role);
-            if (updatedProperty == null)
-                return NotFound();
+            try
+            {
+                var updatedProperty = await _propertyService.UpdatePropertyAsync(id, propertyDto, userId, role);
+                if (updatedProperty == null)
+                    return NotFound();
 
-            return Ok(updatedProperty);
+                return Ok(updatedProperty);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"An error occurred: {ex.Message}");
+            }
         }
 
         [Authorize(Roles = "Admin,Landlord")]
@@ -67,11 +88,22 @@ namespace RentalAppartments.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
-            var result = await _propertyService.DeletePropertyAsync(id, userId, role);
-            if (!result)
-                return NotFound();
+            try
+            {
+                var result = await _propertyService.DeletePropertyAsync(id, userId, role);
+                if (!result)
+                    return NotFound();
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"An error occurred: {ex.Message}");
+            }
         }
 
         [Authorize(Roles = "Admin,Landlord")]
@@ -81,11 +113,22 @@ namespace RentalAppartments.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
-            var result = await _propertyService.UpdatePropertyImagesAsync(id, imageUrls, userId, role);
-            if (!result)
-                return NotFound();
+            try
+            {
+                var result = await _propertyService.UpdatePropertyImagesAsync(id, imageUrls, userId, role);
+                if (!result)
+                    return NotFound();
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"An error occurred: {ex.Message}");
+            }
         }
 
         [Authorize(Roles = "Admin,Landlord")]
@@ -95,11 +138,22 @@ namespace RentalAppartments.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
-            var result = await _propertyService.UpdateRentAmountAsync(id, newRentAmount, userId, role);
-            if (!result)
-                return NotFound();
+            try
+            {
+                var result = await _propertyService.UpdateRentAmountAsync(id, newRentAmount, userId, role);
+                if (!result)
+                    return NotFound();
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"An error occurred: {ex.Message}");
+            }
         }
 
         [Authorize(Roles = "Admin,Landlord")]
@@ -109,11 +163,22 @@ namespace RentalAppartments.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
-            var result = await _propertyService.UpdatePropertyStatusAsync(id, newStatus, userId, role);
-            if (!result)
-                return NotFound();
+            try
+            {
+                var result = await _propertyService.UpdatePropertyStatusAsync(id, newStatus, userId, role);
+                if (!result)
+                    return NotFound();
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"An error occurred: {ex.Message}");
+            }
         }
 
         [Authorize(Roles = "Tenant")]
@@ -122,19 +187,26 @@ namespace RentalAppartments.Controllers
         {
             var tenantId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            var result = await _propertyService.SelectPropertyAsync(id, tenantId);
-            if (!result)
-                return BadRequest("Property not available or not found.");
+            try
+            {
+                var result = await _propertyService.SelectPropertyAsync(id, tenantId);
+                if (!result)
+                    return NotFound();
 
-            return Ok();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"An error occurred: {ex.Message}");
+            }
         }
 
         [Authorize(Roles = "Admin,Landlord")]
         [HttpGet("occupied")]
         public async Task<ActionResult<IEnumerable<PropertyDto>>> GetOccupiedProperties()
         {
-            var occupiedProperties = await _propertyService.GetOccupiedPropertiesAsync();
-            return Ok(occupiedProperties);
+            var properties = await _propertyService.GetOccupiedPropertiesAsync();
+            return Ok(properties);
         }
 
         [Authorize(Roles = "Tenant")]
@@ -142,8 +214,8 @@ namespace RentalAppartments.Controllers
         public async Task<ActionResult<IEnumerable<PropertyDto>>> GetTenantRentedProperties()
         {
             var tenantId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var rentedProperties = await _propertyService.GetTenantRentedPropertiesAsync(tenantId);
-            return Ok(rentedProperties);
+            var properties = await _propertyService.GetTenantRentedPropertiesAsync(tenantId);
+            return Ok(properties);
         }
     }
 }

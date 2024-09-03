@@ -74,6 +74,7 @@ builder.Services.AddAuthorization();
 
 // Register services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPropertyService, PropertyService>();
 
 // Add RoleSeeder as a hosted service
 builder.Services.AddHostedService<RoleSeeder>();
