@@ -29,16 +29,13 @@ namespace RentalAppartments.Data
                     .WithMany(u => u.Properties)
                     .HasForeignKey(p => p.LandlordId)
                     .OnDelete(DeleteBehavior.Restrict);
-
                 entity.HasOne(p => p.CurrentTenant)
                     .WithMany(u => u.RentedProperties)
                     .HasForeignKey(p => p.CurrentTenantId)
                     .OnDelete(DeleteBehavior.SetNull);
-
                 entity.Property(p => p.Status)
                     .HasMaxLength(50)
                     .HasDefaultValue("Available");
-
                 entity.Property(p => p.IsAvailable)
                     .HasDefaultValue(true);
             });
@@ -49,7 +46,6 @@ namespace RentalAppartments.Data
                     .WithMany(u => u.Leases)
                     .HasForeignKey(l => l.TenantId)
                     .OnDelete(DeleteBehavior.Restrict);
-
                 entity.HasOne(l => l.Property)
                     .WithMany(p => p.Leases)
                     .HasForeignKey(l => l.PropertyId)
@@ -62,11 +58,22 @@ namespace RentalAppartments.Data
                     .WithMany(u => u.MaintenanceRequests)
                     .HasForeignKey(m => m.TenantId)
                     .OnDelete(DeleteBehavior.Restrict);
-
                 entity.HasOne(m => m.Property)
                     .WithMany(p => p.MaintenanceRequests)
                     .HasForeignKey(m => m.PropertyId)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.Property(m => m.Title)
+                    .HasMaxLength(100)
+                    .IsRequired();
+                entity.Property(m => m.Status)
+                    .HasMaxLength(50)
+                    .IsRequired();
+                entity.Property(m => m.Notes)
+                    .HasMaxLength(1000);
+                entity.Property(m => m.Cost)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(m => m.AssignedTo)
+                    .HasMaxLength(255);
             });
 
             modelBuilder.Entity<Payment>(entity =>
@@ -75,7 +82,6 @@ namespace RentalAppartments.Data
                     .WithMany(u => u.Payments)
                     .HasForeignKey(p => p.TenantId)
                     .OnDelete(DeleteBehavior.Restrict);
-
                 entity.HasOne(p => p.Property)
                     .WithMany(prop => prop.Payments)
                     .HasForeignKey(p => p.PropertyId)
