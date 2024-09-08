@@ -52,6 +52,7 @@ namespace RentalAppartments.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+
             modelBuilder.Entity<MaintenanceRequest>(entity =>
             {
                 entity.HasOne(m => m.Tenant)
@@ -73,8 +74,10 @@ namespace RentalAppartments.Data
                 entity.Property(m => m.Cost)
                     .HasColumnType("decimal(18,2)");
                 entity.Property(m => m.AssignedTo)
-                    .HasMaxLength(255);
+                    .HasMaxLength(255)
+                    .IsRequired(false);  // This line makes AssignedTo nullable
             });
+
 
             modelBuilder.Entity<Payment>(entity =>
             {

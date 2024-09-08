@@ -9,5 +9,7 @@ namespace RentalAppartments.Interfaces
         Task LogoutAsync();
         Task<AuthResultDto> ApproveRegistrationAsync(string userId);
         Task<IEnumerable<UserDto>> GetPendingLandlordsAsync();
+        Task<IEnumerable<UserDto>> GetAllTenantsAsync();
+        Task<IEnumerable<UserDto>> GetAllLandlordsAsync();
     }
 }

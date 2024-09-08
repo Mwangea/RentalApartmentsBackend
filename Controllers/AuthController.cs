@@ -74,5 +74,21 @@ namespace RentalAppartments.Controllers
 
             return BadRequest(result.Errors);
         }
+
+        [Authorize(Roles = "Admin,Landlord")]
+        [HttpGet("tenants")]
+        public async Task<IActionResult> GetAllTenants()
+        {
+            var tenants = await _authService.GetAllTenantsAsync();
+            return Ok(tenants);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("landlords")]
+        public async Task<IActionResult> GetAllLandlords()
+        {
+            var landlords = await _authService.GetAllLandlordsAsync();
+            return Ok(landlords);
+        }
     }
 }

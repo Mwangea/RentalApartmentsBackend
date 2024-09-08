@@ -1,11 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RentalAppartments.Models
 {
     public class MaintenanceRequest
     {
-
         public int Id { get; set; }
 
         [Required]
@@ -29,7 +29,7 @@ namespace RentalAppartments.Models
 
         [Required]
         [StringLength(50)]
-        public string Status { get; set; } // "Pending", "In Progress", "Completed", "Cancelled"
+        public string Status { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
@@ -46,9 +46,8 @@ namespace RentalAppartments.Models
         public bool IsUrgent { get; set; }
 
         [StringLength(255)]
-        public string AssignedTo { get; set; } // Could be a staff member or contractor
+        public string? AssignedTo { get; set; }  // Note the '?' to make it nullable
 
         public DateTime? ScheduledDate { get; set; }
-
     }
 }

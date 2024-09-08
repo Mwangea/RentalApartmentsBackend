@@ -142,6 +142,18 @@ namespace RentalAppartments.Services
             await _signInManager.SignOutAsync();
         }
 
+        public async Task<IEnumerable<UserDto>> GetAllTenantsAsync()
+        {
+            var tenants = await _userManager.GetUsersInRoleAsync("Tenant");
+            return tenants.Select(MapToUserDto);
+        }
+
+        public async Task<IEnumerable<UserDto>> GetAllLandlordsAsync()
+        {
+            var landlords = await _userManager.GetUsersInRoleAsync("Landlord");
+            return landlords.Where(u => !u.LockoutEnabled).Select(MapToUserDto);
+        }
+
         private string GenerateJwtToken(User user)
         {
             var jwtKey = _configuration["JwtSettings:JwtKey"];
@@ -151,12 +163,13 @@ namespace RentalAppartments.Services
             }
 
             var claims = new List<Claim>
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Role, user.Role)
-            };
+    {
+        new Claim(ClaimTypes.NameIdentifier, user.Id),
+        new Claim(ClaimTypes.Email, user.Email),
+        new Claim(ClaimTypes.Name, user.UserName),
+        new Claim(ClaimTypes.Role, user.Role),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

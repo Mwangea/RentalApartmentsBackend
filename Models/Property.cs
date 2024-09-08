@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace RentalAppartments.Models
 {
@@ -44,6 +45,8 @@ namespace RentalAppartments.Models
         public User Landlord { get; set; }
         public User? CurrentTenant { get; set; }
         public ICollection<Lease> Leases { get; set; }
+
+        [JsonIgnore]
         public ICollection<MaintenanceRequest> MaintenanceRequests { get; set; }
         public ICollection<Payment> Payments { get; set; }
     }

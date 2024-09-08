@@ -1,4 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using MySqlConnector;
+using RentalApartmentSystem.API.Controllers;
 using RentalAppartments.Data;
 using RentalAppartments.DTOs;
 using RentalAppartments.Interfaces;
@@ -14,11 +17,16 @@ namespace RentalAppartments.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly INotificationService _notificationService;
+        private readonly ILogger<MaintenanceService> _logger;
 
-        public MaintenanceService(ApplicationDbContext context, INotificationService notificationService)
+        public MaintenanceService(
+            ApplicationDbContext context,
+            INotificationService notificationService,
+            ILogger<MaintenanceService> logger)
         {
             _context = context;
             _notificationService = notificationService;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<MaintenanceRequest>> GetAllMaintenanceRequestsAsync()
@@ -47,6 +55,19 @@ namespace RentalAppartments.Services
 
         public async Task<MaintenanceRequest> CreateMaintenanceRequestAsync(string tenantId, MaintenanceRequestDto requestDto)
         {
+            // Verify that the tenant exists
+            _logger.LogInformation($"Attempting to create maintenance request for tenant ID: {tenantId}");
+
+            // Verify that the tenant exists
+            var tenant = await _context.Users.FindAsync(tenantId);
+            if (tenant == null)
+            {
+                _logger.LogWarning($"Tenant with ID {tenantId} not found in the database.");
+                throw new ArgumentException($"Invalid tenant ID. The specified tenant (ID: {tenantId}) does not exist.", nameof(tenantId));
+            }
+
+            _logger.LogInformation($"Tenant found: {tenant.Email}");
+
             var maintenanceRequest = new MaintenanceRequest
             {
                 PropertyId = requestDto.PropertyId,
@@ -60,7 +81,26 @@ namespace RentalAppartments.Services
             };
 
             _context.MaintenanceRequests.Add(maintenanceRequest);
-            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                // Log the exception details
+                // You might want to add proper logging here
+                Console.WriteLine($"Error saving maintenance request: {ex.Message}");
+                Console.WriteLine($"Inner exception: {ex.InnerException?.Message}");
+
+                // Optionally, you can check if it's a foreign key violation and provide a more specific error message
+                if (ex.InnerException is MySqlException mySqlEx && mySqlEx.Number == 1452) // 1452 is the MySQL error number for foreign key constraint violation
+                {
+                    throw new InvalidOperationException("Unable to create maintenance request. The specified tenant or property does not exist.", ex);
+                }
+
+                throw; // Re-throw the exception if it's not a foreign key violation
+            }
 
             // Notify landlord about new maintenance request
             var property = await _context.Properties.FindAsync(requestDto.PropertyId);

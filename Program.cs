@@ -7,6 +7,8 @@ using RentalAppartments.Interfaces;
 using RentalAppartments.Models;
 using RentalAppartments.Services;
 using System.Text;
+using System.Security.Claims;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,7 +25,12 @@ builder.Services.AddCors(options =>
 });
 
 // Add services to the container
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
+
 
 // Configure MySQL DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -45,6 +52,11 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.AllowedForNewUsers = true;
     options.User.RequireUniqueEmail = true;
+    // Add these lines to ensure claims are generated correctly
+    options.ClaimsIdentity.UserIdClaimType = ClaimTypes.NameIdentifier;
+    options.ClaimsIdentity.UserNameClaimType = ClaimTypes.Name;
+    options.ClaimsIdentity.EmailClaimType = ClaimTypes.Email;
+    options.ClaimsIdentity.RoleClaimType = ClaimTypes.Role;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
@@ -65,7 +77,9 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["JwtSettings:JwtIssuer"],
         ValidAudience = builder.Configuration["JwtSettings:JwtIssuer"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:JwtKey"]))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:JwtKey"])),
+        NameClaimType = ClaimTypes.Name,
+        RoleClaimType = ClaimTypes.Role
     };
 });
 

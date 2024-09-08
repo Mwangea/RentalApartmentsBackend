@@ -2,6 +2,7 @@
 using RentalAppartments.Models;
 using RRentalAppartments.Models;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace RentalAppartments.Models
 {
@@ -24,6 +25,7 @@ namespace RentalAppartments.Models
 
         public virtual ICollection<Lease> Leases { get; set; }
 
+        [JsonIgnore]
         public virtual ICollection<MaintenanceRequest> MaintenanceRequests { get; set; }
 
         public virtual ICollection<Payment> Payments { get; set; }
