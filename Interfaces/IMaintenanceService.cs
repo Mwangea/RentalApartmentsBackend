@@ -8,7 +8,7 @@ namespace RentalAppartments.Interfaces
         Task<IEnumerable<MaintenanceRequest>> GetAllMaintenanceRequestsAsync();
         Task<IEnumerable<MaintenanceRequest>> GetMaintenanceRequestsByTenantIdAsync(string tenantId);
         Task<MaintenanceRequest> GetMaintenanceRequestByIdAsync(int id);
-        Task<MaintenanceRequest> CreateMaintenanceRequestAsync(string tenantId, MaintenanceRequestDto requestDto);
+        Task<MaintenanceRequest> CreateMaintenanceRequestAsync(MaintenanceRequestDto requestDto);
         Task<MaintenanceRequest> UpdateMaintenanceRequestAsync(int id, MaintenanceRequestDto requestDto);
         Task<MaintenanceRequest> UpdateMaintenanceRequestStatusAsync(int id, string status);
         Task<bool> DeleteMaintenanceRequestAsync(int id);

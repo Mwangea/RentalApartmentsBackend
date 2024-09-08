@@ -10,10 +10,12 @@ namespace RentalAppartments.Services
     public class PropertyService : IPropertyService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<PropertyService> _logger;
 
-        public PropertyService(ApplicationDbContext context)
+        public PropertyService(ApplicationDbContext context, ILogger<PropertyService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<PropertyDto>> GetAllPropertiesAsync()
@@ -189,6 +191,20 @@ namespace RentalAppartments.Services
 
         private PropertyDto MapToDto(Property property)
         {
+            List<string> imageUrls = new List<string>();
+
+            try
+            {
+                if (!string.IsNullOrEmpty(property.ImageUrls))
+                {
+                    imageUrls = JsonSerializer.Deserialize<List<string>>(property.ImageUrls);
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Error deserializing ImageUrls for property {PropertyId}. ImageUrls: {ImageUrls}", property.Id, property.ImageUrls);
+            }
+
             return new PropertyDto
             {
                 Id = property.Id,
@@ -205,7 +221,7 @@ namespace RentalAppartments.Services
                 CreatedAt = property.CreatedAt,
                 LastUpdated = property.LastUpdated,
                 CurrentTenantId = property.CurrentTenantId,
-                ImageUrls = JsonSerializer.Deserialize<List<string>>(property.ImageUrls ?? "[]")
+                ImageUrls = imageUrls
             };
         }
     }

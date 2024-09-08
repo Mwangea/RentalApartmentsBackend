@@ -18,15 +18,19 @@ namespace RentalAppartments.Services
         private readonly ApplicationDbContext _context;
         private readonly INotificationService _notificationService;
         private readonly ILogger<MaintenanceService> _logger;
+        private readonly IPropertyService _propertyService;
 
         public MaintenanceService(
             ApplicationDbContext context,
             INotificationService notificationService,
-            ILogger<MaintenanceService> logger)
+            ILogger<MaintenanceService> logger,
+            IPropertyService propertyService)
+
         {
             _context = context;
             _notificationService = notificationService;
             _logger = logger;
+            _propertyService = propertyService ?? throw new ArgumentNullException(nameof(propertyService));
         }
 
         public async Task<IEnumerable<MaintenanceRequest>> GetAllMaintenanceRequestsAsync()
@@ -53,31 +57,21 @@ namespace RentalAppartments.Services
                 .FirstOrDefaultAsync(m => m.Id == id);
         }
 
-        public async Task<MaintenanceRequest> CreateMaintenanceRequestAsync(string tenantId, MaintenanceRequestDto requestDto)
+        public async Task<MaintenanceRequest> CreateMaintenanceRequestAsync(MaintenanceRequestDto requestDto)
         {
-            // Verify that the tenant exists
-            _logger.LogInformation($"Attempting to create maintenance request for tenant ID: {tenantId}");
-
-            // Verify that the tenant exists
-            var tenant = await _context.Users.FindAsync(tenantId);
-            if (tenant == null)
-            {
-                _logger.LogWarning($"Tenant with ID {tenantId} not found in the database.");
-                throw new ArgumentException($"Invalid tenant ID. The specified tenant (ID: {tenantId}) does not exist.", nameof(tenantId));
-            }
-
-            _logger.LogInformation($"Tenant found: {tenant.Email}");
+            _logger.LogInformation($"Attempting to create maintenance request for tenant ID: {requestDto.TenantId}");
 
             var maintenanceRequest = new MaintenanceRequest
             {
                 PropertyId = requestDto.PropertyId,
-                TenantId = tenantId,
+                TenantId = requestDto.TenantId,
                 Title = requestDto.Title,
                 Description = requestDto.Description,
-                Status = requestDto.Status,
-                CreatedAt = requestDto.CreatedAt,
+                Status = requestDto.Status ?? "Pending",
+                CreatedAt = DateTime.UtcNow,
                 Notes = requestDto.Notes,
-                Cost = requestDto.EstimatedCost
+                Cost = requestDto.EstimatedCost,
+                IsUrgent = requestDto.IsUrgent ?? false
             };
 
             _context.MaintenanceRequests.Add(maintenanceRequest);
@@ -88,18 +82,8 @@ namespace RentalAppartments.Services
             }
             catch (DbUpdateException ex)
             {
-                // Log the exception details
-                // You might want to add proper logging here
-                Console.WriteLine($"Error saving maintenance request: {ex.Message}");
-                Console.WriteLine($"Inner exception: {ex.InnerException?.Message}");
-
-                // Optionally, you can check if it's a foreign key violation and provide a more specific error message
-                if (ex.InnerException is MySqlException mySqlEx && mySqlEx.Number == 1452) // 1452 is the MySQL error number for foreign key constraint violation
-                {
-                    throw new InvalidOperationException("Unable to create maintenance request. The specified tenant or property does not exist.", ex);
-                }
-
-                throw; // Re-throw the exception if it's not a foreign key violation
+                _logger.LogError(ex, "Error saving maintenance request");
+                throw new InvalidOperationException("Unable to create maintenance request. There was an error saving to the database.", ex);
             }
 
             // Notify landlord about new maintenance request
@@ -110,7 +94,7 @@ namespace RentalAppartments.Services
                 {
                     UserId = property.LandlordId,
                     Title = "New Maintenance Request",
-                    Message = $"A new maintenance request has been created for property {property.Address}",
+                    Message = $"A new maintenance request has been created for property {requestDto.PropertyName} by tenant {requestDto.TenantName}",
                     Status = "New"
                 });
             }
