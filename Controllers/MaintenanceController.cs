@@ -310,6 +310,7 @@ namespace RentalApartmentSystem.API.Controllers
             return Ok(new { message = "Maintenance request deleted successfully." });
         }
 
+
         [HttpPost("{id}/update")]
         [Authorize(Roles = "Admin,Landlord")]
         public async Task<IActionResult> SendMaintenanceUpdate(int id, [FromBody] MaintenanceUpdateDto updateDto)
@@ -333,7 +334,7 @@ namespace RentalApartmentSystem.API.Controllers
                     return BadRequest(new { message = "Unable to identify the user." });
                 }
 
-                // Set the UserId automatically
+                // Set the UserId in the updateDto
                 updateDto.UserId = userId;
 
                 // Proceed to send the maintenance update
@@ -351,6 +352,7 @@ namespace RentalApartmentSystem.API.Controllers
                 return StatusCode(500, new { message = "An error occurred while processing your request. Please try again later." });
             }
         }
+
 
     }
 }

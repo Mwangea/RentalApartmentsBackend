@@ -162,12 +162,22 @@ namespace RentalAppartments.Services
             if (maintenanceRequest == null)
                 return false;
 
+            // Retrieve the UserId from the DTO
+            var userId = updateDto.UserId;
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                throw new ArgumentException("UserId is required.");
+            }
+
             // Update the maintenance request
             if (!string.IsNullOrWhiteSpace(updateDto.Status))
                 maintenanceRequest.Status = updateDto.Status;
 
             maintenanceRequest.LastUpdated = DateTime.UtcNow;
             maintenanceRequest.Notes += $"\n{DateTime.UtcNow}: {updateDto.Message}";
+
+            if (!string.IsNullOrWhiteSpace(updateDto.AdditionalNotes))
+                maintenanceRequest.Notes += $"\nAdditional Notes: {updateDto.AdditionalNotes}";
 
             if (updateDto.ScheduledDate.HasValue)
                 maintenanceRequest.Notes += $"\nScheduled for: {updateDto.ScheduledDate.Value:g}";
@@ -183,14 +193,16 @@ namespace RentalAppartments.Services
             // Send notification to tenant
             await _notificationService.CreateNotificationAsync(new MaintenanceUpdateDto
             {
-                UserId = updateDto.UserId, // Ensure to use the UserId from the updateDto
+                UserId = maintenanceRequest.TenantId, // Send notification to the tenant
                 Title = updateDto.Title,
                 Message = updateDto.Message,
                 Status = updateDto.Status,
-                ScheduledDate = updateDto.ScheduledDate
+                ScheduledDate = updateDto.ScheduledDate,
+                AdditionalNotes = updateDto.AdditionalNotes
             });
 
             return true;
         }
+
     }
 }
