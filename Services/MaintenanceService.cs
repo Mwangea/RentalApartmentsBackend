@@ -1,7 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using MySqlConnector;
-using RentalApartmentSystem.API.Controllers;
 using RentalAppartments.Data;
 using RentalAppartments.DTOs;
 using RentalAppartments.Interfaces;
@@ -25,7 +23,6 @@ namespace RentalAppartments.Services
             INotificationService notificationService,
             ILogger<MaintenanceService> logger,
             IPropertyService propertyService)
-
         {
             _context = context;
             _notificationService = notificationService;
@@ -102,22 +99,23 @@ namespace RentalAppartments.Services
             return maintenanceRequest;
         }
 
-        public async Task<MaintenanceRequest> UpdateMaintenanceRequestAsync(int id, MaintenanceRequestDto requestDto)
+        public async Task<MaintenanceRequest> UpdateMaintenanceRequestAsync(int id, MaintenanceRequest request)
         {
-            var maintenanceRequest = await _context.MaintenanceRequests.FindAsync(id);
-            if (maintenanceRequest == null)
+            var existingRequest = await _context.MaintenanceRequests.FindAsync(id);
+            if (existingRequest == null)
                 return null;
 
-            maintenanceRequest.Title = requestDto.Title;
-            maintenanceRequest.Description = requestDto.Description;
-            maintenanceRequest.Status = requestDto.Status;
-            maintenanceRequest.Notes = requestDto.Notes;
-            maintenanceRequest.Cost = requestDto.EstimatedCost;
-            maintenanceRequest.LastUpdated = DateTime.UtcNow;
+            existingRequest.Title = request.Title;
+            existingRequest.Description = request.Description;
+            existingRequest.Status = request.Status;
+            existingRequest.Notes = request.Notes;
+            existingRequest.Cost = request.Cost;
+            existingRequest.IsUrgent = request.IsUrgent;
+            existingRequest.LastUpdated = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
-            return maintenanceRequest;
+            return existingRequest;
         }
 
         public async Task<MaintenanceRequest> UpdateMaintenanceRequestStatusAsync(int id, string status)
@@ -165,19 +163,27 @@ namespace RentalAppartments.Services
                 return false;
 
             // Update the maintenance request
-            maintenanceRequest.Status = updateDto.Status;
+            if (!string.IsNullOrWhiteSpace(updateDto.Status))
+                maintenanceRequest.Status = updateDto.Status;
+
             maintenanceRequest.LastUpdated = DateTime.UtcNow;
             maintenanceRequest.Notes += $"\n{DateTime.UtcNow}: {updateDto.Message}";
 
             if (updateDto.ScheduledDate.HasValue)
                 maintenanceRequest.Notes += $"\nScheduled for: {updateDto.ScheduledDate.Value:g}";
 
+            if (updateDto.UpdatedCost.HasValue)
+                maintenanceRequest.Cost = updateDto.UpdatedCost.Value;
+
+            if (updateDto.IsUrgent.HasValue)
+                maintenanceRequest.IsUrgent = updateDto.IsUrgent.Value;
+
             await _context.SaveChangesAsync();
 
             // Send notification to tenant
             await _notificationService.CreateNotificationAsync(new MaintenanceUpdateDto
             {
-                UserId = maintenanceRequest.TenantId,
+                UserId = updateDto.UserId, // Ensure to use the UserId from the updateDto
                 Title = updateDto.Title,
                 Message = updateDto.Message,
                 Status = updateDto.Status,

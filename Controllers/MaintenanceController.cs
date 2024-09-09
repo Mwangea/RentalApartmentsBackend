@@ -237,18 +237,39 @@ namespace RentalApartmentSystem.API.Controllers
         }
 
 
-
-
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,Landlord")]
-        public async Task<IActionResult> UpdateMaintenanceRequest(int id, [FromBody] MaintenanceRequestDto requestDto)
+        [Authorize(Roles = "Admin,Landlord,Tenant")]
+        public async Task<IActionResult> UpdateMaintenanceRequest(int id, [FromBody] UpdateMaintenanceRequestDto updateDto)
         {
-            var updatedRequest = await _maintenanceService.UpdateMaintenanceRequestAsync(id, requestDto);
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var existingRequest = await _maintenanceService.GetMaintenanceRequestByIdAsync(id);
+
+            if (existingRequest == null)
+            {
+                return NotFound("Maintenance request not found.");
+            }
+
+            if (User.IsInRole("Tenant") && existingRequest.TenantId != userId)
+            {
+                return Forbid();
+            }
+
+            // Update only the fields provided in the updateDto
+            if (updateDto.Title != null) existingRequest.Title = updateDto.Title;
+            if (updateDto.Description != null) existingRequest.Description = updateDto.Description;
+            if (updateDto.Status != null) existingRequest.Status = updateDto.Status;
+            if (updateDto.Notes != null) existingRequest.Notes = updateDto.Notes;
+            if (updateDto.EstimatedCost.HasValue) existingRequest.Cost = updateDto.EstimatedCost.Value;
+            if (updateDto.IsUrgent.HasValue) existingRequest.IsUrgent = updateDto.IsUrgent.Value;
+
+            var updatedRequest = await _maintenanceService.UpdateMaintenanceRequestAsync(id, existingRequest);
             if (updatedRequest == null)
             {
-                return NotFound();
+                return StatusCode(500, "Failed to update maintenance request.");
             }
-            return Ok(updatedRequest);
+
+            // Return only a simple string message
+            return Ok("Maintenance request updated successfully");
         }
 
         [HttpPut("{id}/status")]
@@ -264,29 +285,72 @@ namespace RentalApartmentSystem.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Tenant")]
         public async Task<IActionResult> DeleteMaintenanceRequest(int id)
         {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var request = await _maintenanceService.GetMaintenanceRequestByIdAsync(id);
+
+            if (request == null)
+            {
+                return NotFound(new { message = "Maintenance request not found." });
+            }
+
+            if (User.IsInRole("Tenant") && request.TenantId != userId)
+            {
+                return Forbid();
+            }
+
             var result = await _maintenanceService.DeleteMaintenanceRequestAsync(id);
             if (!result)
             {
-                return NotFound();
+                return NotFound(new { message = "Failed to delete maintenance request." });
             }
-            return NoContent();
+
+            return Ok(new { message = "Maintenance request deleted successfully." });
         }
 
         [HttpPost("{id}/update")]
         [Authorize(Roles = "Admin,Landlord")]
         public async Task<IActionResult> SendMaintenanceUpdate(int id, [FromBody] MaintenanceUpdateDto updateDto)
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            updateDto.UserId = userId;
-            var result = await _maintenanceService.SendMaintenanceUpdateAsync(id, updateDto);
-            if (!result)
+            try
             {
-                return NotFound();
+                if (updateDto == null)
+                {
+                    return BadRequest(new { message = "Update data is required." });
+                }
+
+                if (string.IsNullOrWhiteSpace(updateDto.Title) || string.IsNullOrWhiteSpace(updateDto.Message))
+                {
+                    return BadRequest(new { message = "Title and Message are required for the update." });
+                }
+
+                // Retrieve the UserId from the claims
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return BadRequest(new { message = "Unable to identify the user." });
+                }
+
+                // Set the UserId automatically
+                updateDto.UserId = userId;
+
+                // Proceed to send the maintenance update
+                var result = await _maintenanceService.SendMaintenanceUpdateAsync(id, updateDto);
+                if (!result)
+                {
+                    return NotFound(new { message = "Maintenance request not found or update failed." });
+                }
+
+                return Ok(new { message = "Maintenance update sent successfully" });
             }
-            return Ok(new { message = "Maintenance update sent successfully" });
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error occurred while sending maintenance update for request {id}");
+                return StatusCode(500, new { message = "An error occurred while processing your request. Please try again later." });
+            }
         }
+
     }
 }

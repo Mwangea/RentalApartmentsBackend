@@ -28,7 +28,7 @@ namespace RentalAppartments.DTOs
         [StringLength(500)]
         public string AdditionalNotes { get; set; }
 
-        public bool IsUrgent { get; set; }
+        public bool? IsUrgent { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
