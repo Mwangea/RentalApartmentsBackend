@@ -327,17 +327,7 @@ namespace RentalApartmentSystem.API.Controllers
                     return BadRequest(new { message = "Title and Message are required for the update." });
                 }
 
-                // Retrieve the UserId from the claims
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return BadRequest(new { message = "Unable to identify the user." });
-                }
-
-                // Set the UserId in the updateDto
-                updateDto.UserId = userId;
-
-                // Proceed to send the maintenance update
+                // Proceed to send the maintenance update, the service will retrieve the tenant ID
                 var result = await _maintenanceService.SendMaintenanceUpdateAsync(id, updateDto);
                 if (!result)
                 {

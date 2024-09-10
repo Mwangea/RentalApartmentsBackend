@@ -158,16 +158,15 @@ namespace RentalAppartments.Services
 
         public async Task<bool> SendMaintenanceUpdateAsync(int id, MaintenanceUpdateDto updateDto)
         {
-            var maintenanceRequest = await _context.MaintenanceRequests.FindAsync(id);
+            var maintenanceRequest = await _context.MaintenanceRequests
+                .Include(m => m.Tenant)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
             if (maintenanceRequest == null)
                 return false;
 
-            // Retrieve the UserId from the DTO
-            var userId = updateDto.UserId;
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                throw new ArgumentException("UserId is required.");
-            }
+            // Retrieve the tenant's UserId from the maintenance request
+            var tenantId = maintenanceRequest.TenantId;
 
             // Update the maintenance request
             if (!string.IsNullOrWhiteSpace(updateDto.Status))
@@ -193,7 +192,7 @@ namespace RentalAppartments.Services
             // Send notification to tenant
             await _notificationService.CreateNotificationAsync(new MaintenanceUpdateDto
             {
-                UserId = maintenanceRequest.TenantId, // Send notification to the tenant
+                UserId = tenantId, // Send notification to the tenant who created the request
                 Title = updateDto.Title,
                 Message = updateDto.Message,
                 Status = updateDto.Status,
