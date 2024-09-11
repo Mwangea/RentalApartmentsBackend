@@ -153,16 +153,104 @@ namespace RentalAppartments.Services
 
         public async Task<IEnumerable<LeaseDto>> GetLeasesByPropertyAsync(int propertyId, string userId, string role)
         {
+            // Check if the user is an admin or the landlord of the property
+            var property = await _context.Properties
+                .FirstOrDefaultAsync(p => p.Id == propertyId);
+
+            if (property == null)
+            {
+                throw new ArgumentException($"Property with ID {propertyId} not found.");
+            }
+
+            if (role != "Admin" && property.LandlordId != userId)
+            {
+                _logger.LogWarning("Unauthorized access attempt to leases for property {PropertyId} by user {UserId}", propertyId, userId);
+                throw new UnauthorizedAccessException("You are not authorized to view leases for this property.");
+            }
+
             var leases = await _context.Leases
-                .Where(l => l.PropertyId == propertyId)
-                .Include(l => l.Property)
-                .Include(l => l.Tenant)
-                .ToListAsync();
+            .Where(l => l.PropertyId == propertyId)
+            .Include(l => l.Property)
+                .ThenInclude(p => p.Landlord)
+            .Include(l => l.Tenant)
+            .ToListAsync();
 
 
             return leases.Select(MapLeaseToDto);
         }
 
+
+        public async Task<IEnumerable<LeaseDto>> GetLeasesByTenantAsync(string tenantId)
+        {
+            var leases = await _context.Leases
+                .Where(l => l.TenantId == tenantId)
+                .Include(l => l.Property)
+                    .ThenInclude(p => p.Landlord)
+                .Include(l => l.Tenant)
+                .ToListAsync();
+
+            return leases.Select(MapLeaseToDto);
+        }
+
+
+        public async Task<string> ActivateLeaseAsync(int id, string userId, string role)
+        {
+            var lease = await _context.Leases
+                .Include(l => l.Property)
+                .FirstOrDefaultAsync(l => l.Id == id);
+
+            if (lease == null)
+                return null;
+
+            if (role != "Admin" && lease.Property.LandlordId != userId)
+            {
+                throw new UnauthorizedAccessException("You are not authorized to activate this lease.");
+            }
+
+            lease.IsActive = true;
+            lease.LastUpdated = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return $"Lease {id} has been successfully activated.";
+        }
+
+        public async Task<string> DeactivateLeaseAsync(int id, string userId, string role)
+        {
+            _logger.LogInformation($"Attempting to deactivate lease {id} in service");
+
+            var lease = await _context.Leases
+                .Include(l => l.Property)
+                .FirstOrDefaultAsync(l => l.Id == id);
+
+            if (lease == null)
+            {
+                _logger.LogWarning($"Lease {id} not found");
+                return null;
+            }
+
+            if (role != "Admin" && lease.Property.LandlordId != userId)
+            {
+                _logger.LogWarning($"Unauthorized attempt to deactivate lease {id} by user {userId}");
+                throw new UnauthorizedAccessException("You are not authorized to deactivate this lease.");
+            }
+
+            lease.IsActive = false;
+            lease.LastUpdated = DateTime.UtcNow;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                _logger.LogInformation($"Lease {id} successfully deactivated and saved to database");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error saving deactivated lease {id} to database: {ex.Message}");
+                throw;
+            }
+
+            return $"Lease {id} has been successfully deactivated.";
+        }
 
         private LeaseDto MapLeaseToDto(Lease lease)
         {

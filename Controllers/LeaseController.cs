@@ -153,6 +153,89 @@ namespace RentalAppartments.Controllers
             {
                 return Unauthorized(ex.Message);
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving leases for property {PropertyId}", propertyId);
+                return StatusCode(500, "An unexpected error occurred. Please try again later.");
+            }
+        }
+
+
+        [HttpGet("tenant")]
+        [Authorize(Roles = "Tenant")]
+        public async Task<ActionResult<IEnumerable<LeaseDto>>> GetTenantLease()
+        {
+            var tenantId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            try
+            {
+                var leases = await _leaseService.GetLeasesByTenantAsync(tenantId);
+                return Ok(leases);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+        }
+
+
+
+        [HttpPost("{id}/activate")]
+        [Authorize(Roles = "Admin,Landlord")]
+        public async Task<ActionResult> ActivateLease(int id)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            try
+            {
+                var result = await _leaseService.ActivateLeaseAsync(id, userId, role);
+                if (result == null)
+                    return NotFound($"Lease with ID {id} not found.");
+
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"An error occurred: {ex.Message}");
+            }
+        }
+
+        [HttpPost("{id}/deactivate")]
+        [Authorize(Roles = "Admin,Landlord")]
+        public async Task<ActionResult> DeactivateLease(int id)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            _logger.LogInformation($"Attempting to deactivate lease {id} by user {userId} with role {role}");
+
+            try
+            {
+                var result = await _leaseService.DeactivateLeaseAsync(id, userId, role);
+                if (result == null)
+                {
+                    _logger.LogWarning($"Lease with ID {id} not found");
+                    return NotFound($"Lease with ID {id} not found.");
+                }
+
+                _logger.LogInformation($"Lease {id} successfully deactivated");
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning($"Unauthorized attempt to deactivate lease {id}: {ex.Message}");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred while deactivating lease {id}: {ex.Message}");
+                return BadRequest($"An error occurred: {ex.Message}");
+            }
         }
 
 
