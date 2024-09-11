@@ -7,5 +7,8 @@ namespace RentalAppartments.Interfaces
         Task<IEnumerable<LeaseDto>> GetAllLeasesAsync();
         Task<LeaseDto> GetLeaseAsync(int id, string userId, string role);
         Task<LeaseDto> CreateLeaseAsync(CreateLeaseDto createLeaseDto, string userId, string role);
+        Task<LeaseDto> UpdateLeaseAsync(int id, UpdateLeaseDto updateLeaseDto, string userId, string role);
+        Task<bool> DeleteLeaseAsync(int id, string userId, string role);
+        Task<IEnumerable<LeaseDto>> GetLeasesByPropertyAsync(int propertyId, string userId, string role);
     }
 }

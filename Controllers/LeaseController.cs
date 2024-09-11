@@ -11,10 +11,12 @@ namespace RentalAppartments.Controllers
     public class LeaseController: ControllerBase
     {
         private readonly ILeaseService _leaseService;
+        private readonly ILogger<LeaseController> _logger;
 
-        public LeaseController(ILeaseService leaseService)
+        public LeaseController(ILeaseService leaseService, ILogger<LeaseController> logger)
         {
             _leaseService = leaseService;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         [HttpGet]
@@ -70,5 +72,89 @@ namespace RentalAppartments.Controllers
                 return BadRequest($"An error occured: {ex.Message}");
             }
         }
+
+
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,Landlord")]
+        public async Task<ActionResult<LeaseDto>> UpdateLease(int id, UpdateLeaseDto updateLeaseDto)
+        {
+            if (updateLeaseDto == null)
+            {
+                return BadRequest("UpdateLeaseDto cannot be null");
+            }
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(role))
+            {
+                return Unauthorized("User identity information is missing");
+            }
+
+            try
+            {
+                var updatedLease = await _leaseService.UpdateLeaseAsync(id, updateLeaseDto, userId, role);
+                if (updatedLease == null)
+                {
+                    return NotFound($"Lease with ID {id} not found");
+                }
+
+                return Ok(updatedLease);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating lease {LeaseId}", id);
+                return StatusCode(500, "An unexpected error occurred while updating the lease. Please try again later.");
+            }
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin,Landlord")]
+        public async Task<ActionResult> DeleteLease(int id)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            try
+            {
+              var result = await _leaseService.DeleteLeaseAsync(id, userId, role);
+                if (!result)
+                    return NotFound($"Lease with ID {id} not found.");
+
+                return Ok("Lease deleted successfully.");
+            } 
+            catch (UnauthorizedAccessException ex) 
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("property/{propertyId}")]
+        [Authorize(Roles = "Admin,Landlord")]
+        public async Task<ActionResult<IEnumerable<LeaseDto>>> GetLeasesByProperty(int propertyId)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            try
+            {
+                var leases = await _leaseService.GetLeasesByPropertyAsync(propertyId, userId, role);
+                return Ok(leases);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+        }
+
+
     }
 }
