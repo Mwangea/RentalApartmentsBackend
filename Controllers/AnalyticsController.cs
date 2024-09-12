@@ -56,7 +56,13 @@ namespace RentalAppartments.Controllers
         [HttpGet("leases")]
         public async Task<ActionResult<LeaseAnalyticsDto>> GetLeaseAnalytics([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
-            var leaseAnalytics = await _analyticsService.GetLeaseAnalyticsAsync(startDate, endDate);
+            var landlordId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (User.IsInRole("Landlord") && string.IsNullOrEmpty(landlordId))
+            {
+                return Unauthorized();
+            }
+
+            var leaseAnalytics = await _analyticsService.GetLeaseAnalyticsAsync(startDate, endDate, landlordId);
             return Ok(leaseAnalytics);
         }
 
@@ -64,7 +70,13 @@ namespace RentalAppartments.Controllers
         [HttpGet("payments")]
         public async Task<ActionResult<PaymentAnalyticsDto>> GetPaymentAnalytics([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
-            var paymentAnalytics = await _analyticsService.GetPaymentAnalyticsAsync(startDate, endDate);
+            var landlordId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (User.IsInRole("Landlord") && string.IsNullOrEmpty(landlordId))
+            {
+                return Unauthorized();
+            }
+
+            var paymentAnalytics = await _analyticsService.GetPaymentAnalyticsAsync(startDate, endDate, landlordId);
             return Ok(paymentAnalytics);
         }
 
@@ -72,18 +84,31 @@ namespace RentalAppartments.Controllers
         [HttpGet("maintenance")]
         public async Task<ActionResult<MaintenanceAnalyticsDto>> GetMaintenanceAnalytics([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
-            var maintenanceAnalytics = await _analyticsService.GetMaintenanceAnalyticsAsync(startDate, endDate);
+            var landlordId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (User.IsInRole("Landlord") && string.IsNullOrEmpty(landlordId))
+            {
+                return Unauthorized();
+            }
+
+            var maintenanceAnalytics = await _analyticsService.GetMaintenanceAnalyticsAsync(startDate, endDate, landlordId);
             return Ok(maintenanceAnalytics);
         }
+
 
         [Authorize(Roles = "Admin,Landlord")]
         [HttpGet("analytics")]
         public async Task<ActionResult<PropertyAnalyticsDto>> GetPropertyAnalytics([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
             var landlordId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (User.IsInRole("Landlord") && string.IsNullOrEmpty(landlordId))
+            {
+                return Unauthorized();
+            }
+
             var propertyAnalytics = await _analyticsService.GetPropertyAnalyticsAsync(startDate, endDate, landlordId);
             return Ok(propertyAnalytics);
         }
+
 
         [Authorize(Roles = "Admin")]
         [HttpGet("notifications")]
@@ -92,6 +117,7 @@ namespace RentalAppartments.Controllers
             var notificationAnalytics = await _analyticsService.GetNotificationAnalyticsAsync(startDate, endDate);
             return Ok(notificationAnalytics);
         }
+
 
         [Authorize(Roles = "Admin,Landlord,Tenant")]
         [HttpGet("user-summary")]

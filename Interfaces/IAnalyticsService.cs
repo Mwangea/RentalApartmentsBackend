@@ -8,9 +8,9 @@ namespace RentalAppartments.Interfaces
         Task<IEnumerable<AnalyticsDto>> GetAnalyticsForDateRangeAsync(DateTime startDate, DateTime endDate);
         Task<AnalyticsSummaryDto> GetAnalyticsSummaryAsync(DateTime startDate, DateTime endDate);
         Task<AnalyticsDto> RecordDailyAnalyticsAsync();
-        Task<LeaseAnalyticsDto> GetLeaseAnalyticsAsync(DateTime startDate, DateTime endDate);
-        Task<PaymentAnalyticsDto> GetPaymentAnalyticsAsync(DateTime startDate, DateTime endDate);
-        Task<MaintenanceAnalyticsDto> GetMaintenanceAnalyticsAsync(DateTime startDate, DateTime endDate);
+        Task<LeaseAnalyticsDto> GetLeaseAnalyticsAsync(DateTime startDate, DateTime endDate, string landlordId);
+        Task<PaymentAnalyticsDto> GetPaymentAnalyticsAsync(DateTime startDate, DateTime endDate, string landlordId);
+        Task<MaintenanceAnalyticsDto> GetMaintenanceAnalyticsAsync(DateTime startDate, DateTime endDate, string landlordId);
         Task<PropertyAnalyticsDto> GetPropertyAnalyticsAsync(DateTime startDate, DateTime endDate, string landlordId);
         Task<NotificationAnalyticsDto> GetNotificationAnalyticsAsync(DateTime startDate, DateTime endDate);
         Task<UserAnalyticsSummaryDto> GetUserAnalyticsSummaryAsync(string userId, string role);

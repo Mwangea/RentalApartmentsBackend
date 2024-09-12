@@ -80,11 +80,17 @@ namespace RentalAppartments.Services
             return MapToDto(analytics);
         }
 
-        public async Task<LeaseAnalyticsDto> GetLeaseAnalyticsAsync(DateTime startDate, DateTime endDate)
+        public async Task<LeaseAnalyticsDto> GetLeaseAnalyticsAsync(DateTime startDate, DateTime endDate, string landlordId)
         {
-            var leases = await _context.Leases
-                .Where(l => l.CreatedAt >= startDate && l.CreatedAt <= endDate)
-                .ToListAsync();
+            var query = _context.Leases
+                .Where(l => l.CreatedAt >= startDate && l.CreatedAt <= endDate);
+
+            if (!string.IsNullOrEmpty(landlordId))
+            {
+                query = query.Where(l => l.Property.LandlordId == landlordId);
+            }
+
+            var leases = await query.ToListAsync();
 
             return new LeaseAnalyticsDto
             {
@@ -97,11 +103,17 @@ namespace RentalAppartments.Services
             };
         }
 
-        public async Task<PaymentAnalyticsDto> GetPaymentAnalyticsAsync(DateTime startDate, DateTime endDate)
+        public async Task<PaymentAnalyticsDto> GetPaymentAnalyticsAsync(DateTime startDate, DateTime endDate, string landlordId)
         {
-            var payments = await _context.Payments
-                .Where(p => p.PaymentDate >= startDate && p.PaymentDate <= endDate)
-                .ToListAsync();
+            var query = _context.Payments
+                .Where(p => p.PaymentDate >= startDate && p.PaymentDate <= endDate);
+
+            if (!string.IsNullOrEmpty(landlordId))
+            {
+                query = query.Where(p => p.Lease.Property.LandlordId == landlordId);
+            }
+
+            var payments = await query.ToListAsync();
 
             return new PaymentAnalyticsDto
             {
@@ -112,11 +124,17 @@ namespace RentalAppartments.Services
             };
         }
 
-        public async Task<MaintenanceAnalyticsDto> GetMaintenanceAnalyticsAsync(DateTime startDate, DateTime endDate)
+        public async Task<MaintenanceAnalyticsDto> GetMaintenanceAnalyticsAsync(DateTime startDate, DateTime endDate, string landlordId)
         {
-            var requests = await _context.MaintenanceRequests
-                .Where(m => m.CreatedAt >= startDate && m.CreatedAt <= endDate)
-                .ToListAsync();
+            var query = _context.MaintenanceRequests
+                .Where(m => m.CreatedAt >= startDate && m.CreatedAt <= endDate);
+
+            if (!string.IsNullOrEmpty(landlordId))
+            {
+                query = query.Where(m => m.Property.LandlordId == landlordId);
+            }
+
+            var requests = await query.ToListAsync();
 
             return new MaintenanceAnalyticsDto
             {
@@ -134,9 +152,14 @@ namespace RentalAppartments.Services
 
         public async Task<PropertyAnalyticsDto> GetPropertyAnalyticsAsync(DateTime startDate, DateTime endDate, string landlordId)
         {
-            var properties = await _context.Properties
-                .Where(p => p.LandlordId == landlordId)
-                .ToListAsync();
+            var query = _context.Properties.AsQueryable();
+
+            if (!string.IsNullOrEmpty(landlordId))
+            {
+                query = query.Where(p => p.LandlordId == landlordId);
+            }
+
+            var properties = await query.ToListAsync();
 
             var occupiedProperties = properties.Count(p => !p.IsAvailable);
 

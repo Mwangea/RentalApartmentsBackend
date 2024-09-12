@@ -1,6 +1,6 @@
 ﻿namespace RentalAppartments.Interfaces
 {
-    public class IPaymentService
+    public interface IPaymentService
     {
     }
 }
