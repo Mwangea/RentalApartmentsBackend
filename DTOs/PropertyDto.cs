@@ -38,5 +38,7 @@ namespace RentalAppartments.DTOs
         public List<string> ImageUrls { get; set; }
 
         public string? CurrentTenantId { get; set; }
+
+        public string Type { get; set; }
     }
 }

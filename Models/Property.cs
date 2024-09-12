@@ -49,5 +49,9 @@ namespace RentalAppartments.Models
         [JsonIgnore]
         public ICollection<MaintenanceRequest> MaintenanceRequests { get; set; }
         public ICollection<Payment> Payments { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string Type { get; set; }
     }
 }
