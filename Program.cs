@@ -86,6 +86,9 @@ builder.Services.AddAuthentication(options =>
 // Add Authorization
 builder.Services.AddAuthorization();
 
+// Add HttpClientFactory
+builder.Services.AddHttpClient();
+
 // Register services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPropertyService, PropertyService>();
@@ -93,6 +96,7 @@ builder.Services.AddScoped<IMaintenanceService, MaintenanceService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ILeaseService, LeaseService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<IPaymentService , PaymentService>();
 
 // Add RoleSeeder as a hosted service
 builder.Services.AddHostedService<RoleSeeder>();
