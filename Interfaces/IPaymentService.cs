@@ -1,13 +1,11 @@
 ﻿using RentalAppartments.DTOs;
-using RentalAppartments.Models;
+using System.Threading.Tasks;
 
 namespace RentalAppartments.Interfaces
 {
     public interface IPaymentService
     {
-        Task<PaymentResult> ProcessMpesaPaymentAsync(MpesaPaymentRequest request, string tenantId);
-        //Task<Payment> GetPaymentByIdAsync(int paymentId);
-        // Task<IEnumerable<Payment>> GetPaymentsByTenantIdAsync(string tenantId);
-        // Task<IEnumerable<Payment>> GetPaymentsByPropertyIdAsync(int propertyId);
+        //Task<PaymentResult> InitiateMpesaPaymentAsync(MpesaPaymentRequest request, string userId);
+        Task<PaymentResult> InitiatePayment(MpesaPaymentRequest paymentRequest);
     }
 }

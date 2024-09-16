@@ -15,5 +15,7 @@ namespace RentalAppartments.Interfaces
         Task<bool> SelectPropertyAsync(int id, string tenantId);
         Task<IEnumerable<PropertyDto>> GetOccupiedPropertiesAsync();
         Task<IEnumerable<PropertyDto>> GetTenantRentedPropertiesAsync(string tenantId);
+
+        Task<string> GetLandlordIdByPropertyIdAsync(int propertyId);
     }
 }

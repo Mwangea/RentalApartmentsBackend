@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
-
 using RentalAppartments.Data;
 using RentalAppartments.DTOs;
 using RentalAppartments.Interfaces;
+using RentalAppartments.Models;
 using RRentalAppartments.Models;
 
 namespace RentalAppartments.Services
@@ -41,6 +41,12 @@ namespace RentalAppartments.Services
 
         public async Task<Notification> CreateNotificationAsync(RentReminderDto reminderDto)
         {
+            var user = await _context.Users.FindAsync(reminderDto.UserId);
+            if (user == null)
+            {
+                throw new ArgumentException($"User with ID {reminderDto.UserId} not found");
+            }
+
             var notification = new Notification
             {
                 UserId = reminderDto.UserId,
@@ -69,7 +75,6 @@ namespace RentalAppartments.Services
                 CreatedAt = DateTime.UtcNow,
                 IsSent = false
             };
-
             _context.Notifications.Add(notification);
             await _context.SaveChangesAsync();
             return notification;
@@ -82,11 +87,9 @@ namespace RentalAppartments.Services
             {
                 throw new ArgumentException("User not found");
             }
-
             user.EmailNotifications = settingsDto.EmailNotifications;
             user.SmsNotifications = settingsDto.SmsNotifications;
             user.PushNotifications = settingsDto.PushNotifications;
-
             await _context.SaveChangesAsync();
             return settingsDto;
         }
@@ -98,7 +101,6 @@ namespace RentalAppartments.Services
             {
                 throw new ArgumentException("User not found");
             }
-
             return new NotificationSettingsDto
             {
                 EmailNotifications = user.EmailNotifications,

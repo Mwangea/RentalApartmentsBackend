@@ -11,5 +11,6 @@ namespace RentalAppartments.Interfaces
         Task<IEnumerable<UserDto>> GetPendingLandlordsAsync();
         Task<IEnumerable<UserDto>> GetAllTenantsAsync();
         Task<IEnumerable<UserDto>> GetAllLandlordsAsync();
+        Task<IEnumerable<UserDto>> GetAllAdminsAsync();
     }
 }

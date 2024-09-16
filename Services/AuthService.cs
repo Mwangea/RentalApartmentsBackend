@@ -154,6 +154,12 @@ namespace RentalAppartments.Services
             return landlords.Where(u => !u.LockoutEnabled).Select(MapToUserDto);
         }
 
+        public async Task<IEnumerable<UserDto>> GetAllAdminsAsync()
+        {
+            var admins = await _userManager.GetUsersInRoleAsync("Admin");
+            return admins.Select(MapToUserDto);
+        }
+
         private string GenerateJwtToken(User user)
         {
             var jwtKey = _configuration["JwtSettings:JwtKey"];

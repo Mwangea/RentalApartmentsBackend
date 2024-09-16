@@ -12,6 +12,12 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
 // Configure CORS
 builder.Services.AddCors(options =>
 {
@@ -122,6 +128,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Add this line to log the application URLs
+app.Logger.LogInformation("Application is starting. URLS: {urls}", string.Join(", ", app.Urls));
 
 app.Run();
 

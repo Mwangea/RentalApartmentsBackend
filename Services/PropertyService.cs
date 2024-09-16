@@ -100,6 +100,21 @@ namespace RentalAppartments.Services
             return true;
         }
 
+        public async Task<string> GetLandlordIdByPropertyIdAsync(int propertyId)
+        {
+            var property = await _context.Properties
+                .Where(p => p.Id == propertyId)
+                .Select(p => p.LandlordId)
+                .FirstOrDefaultAsync();
+
+            if (property == null)
+            {
+                _logger.LogWarning("Property with ID {PropertyId} not found when attempting to get landlord ID", propertyId);
+            }
+
+            return property;
+        }
+
         public async Task<bool> UpdatePropertyImagesAsync(int id, List<string> imageUrls, string userId, string role)
         {
             var property = await _context.Properties.FindAsync(id);
@@ -179,6 +194,8 @@ namespace RentalAppartments.Services
 
             return occupiedProperties.Select(p => MapToDto(p));
         }
+
+
 
         public async Task<IEnumerable<PropertyDto>> GetTenantRentedPropertiesAsync(string tenantId)
         {

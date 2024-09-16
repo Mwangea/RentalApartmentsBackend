@@ -40,4 +40,6 @@ namespace RentalAppartments.Models
        // public User Tenant { get; set; }
         public Property Property { get; set; }
     }
+
+
 }
