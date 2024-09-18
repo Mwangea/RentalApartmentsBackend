@@ -11,6 +11,7 @@ namespace RentalAppartments.Interfaces
         Task<bool> TenantHasAccessToNotificationAsync(string tenantId, int notificationId);
         Task<Notification> CreateNotificationAsync(RentReminderDto reminderDto);
         Task<Notification> CreateNotificationAsync(MaintenanceUpdateDto updateDto);
+        Task<Notification> CreateGeneralNotificationAsync(NotificationDto notificationDto);
         Task<NotificationSettingsDto> UpdateNotificationSettingsAsync(string userId, NotificationSettingsDto settingsDto);
         Task<NotificationSettingsDto> GetNotificationSettingsAsync(string userId);
     }

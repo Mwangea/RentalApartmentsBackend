@@ -80,6 +80,30 @@ namespace RentalAppartments.Services
             return notification;
         }
 
+        public async Task<Notification> CreateGeneralNotificationAsync(NotificationDto notificationDto)
+        {
+            var user = await _context.Users.FindAsync(notificationDto.UserId);
+            if (user == null)
+            {
+                throw new ArgumentException($"User with ID {notificationDto.UserId} not found");
+            }
+
+            var notification = new Notification
+            {
+                UserId = notificationDto.UserId,
+                Title = notificationDto.Title,
+                Message = notificationDto.Message,
+                Type = notificationDto.Type ?? "General",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow,
+                IsSent = false
+            };
+
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
+            return notification;
+        }
+
         public async Task<NotificationSettingsDto> UpdateNotificationSettingsAsync(string userId, NotificationSettingsDto settingsDto)
         {
             var user = await _context.Users.FindAsync(userId);

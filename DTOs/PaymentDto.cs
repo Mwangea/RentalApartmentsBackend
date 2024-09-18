@@ -2,7 +2,7 @@
 
 namespace RentalAppartments.DTOs
 {
-    public class MpesaPaymentRequest
+    public class MpesaPaymentRequest : IPaymentRequest
     {
         [Required]
         public int LeaseId { get; set; }
@@ -11,7 +11,7 @@ namespace RentalAppartments.DTOs
         public int PropertyId { get; set; }
 
         // Remove any validation attribute from TenantId
-        public string TenantId { get; set; }
+        public string? TenantId { get; set; }
 
         [Required]
         [Range(0.01, double.MaxValue, ErrorMessage = "Amount must be greater than 0")]
@@ -28,6 +28,7 @@ namespace RentalAppartments.DTOs
         public bool Cancelled { get; set; }
         public string Message { get; set; }
         public string TransactionId { get; set; }
+        public string MpesaTransactionId { get; set; }
     }
 
     public class MpesaCallbackDto

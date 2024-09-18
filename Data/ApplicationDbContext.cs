@@ -91,6 +91,11 @@ namespace RentalAppartments.Data
                     .WithMany(prop => prop.Payments)
                     .HasForeignKey(p => p.PropertyId)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.Property(p => p.PaymentMethod)
+                    .IsRequired()
+                    .HasMaxLength(50);
+                entity.Property(p => p.Notes)
+                    .IsRequired(false);
             });
 
             modelBuilder.Entity<Notification>(entity =>

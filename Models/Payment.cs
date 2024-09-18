@@ -27,6 +27,7 @@ namespace RentalAppartments.Models
         public string PaymentMethod { get; set; } // "Credit Card", "Bank Transfer", "Cash", etc.
 
         public string TransactionId { get; set; }
+        public string? MpesaTransactionId { get; set; }
 
         [Required]
         public string Status { get; set; } // "Pending", "Completed", "Failed", "Refunded"

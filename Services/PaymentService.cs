@@ -7,18 +7,25 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
+using RentalAppartments.Models;
+using RentalAppartments.Data;
 
 public class PaymentService : IPaymentService
 {
     private readonly IConfiguration _configuration;
     private readonly HttpClient _httpClient;
     private readonly ILogger<PaymentService> _logger;
+    private readonly ApplicationDbContext _context;
+    private readonly INotificationService _notificationService;
 
-    public PaymentService(IConfiguration configuration, HttpClient httpClient, ILogger<PaymentService> logger)
+    public PaymentService(IConfiguration configuration, HttpClient httpClient, ILogger<PaymentService> logger, ApplicationDbContext dbContext, INotificationService notificationService)
     {
         _configuration = configuration;
         _httpClient = httpClient;
         _logger = logger;
+        _context = dbContext;
+        _notificationService = notificationService;
     }
 
     public async Task<PaymentResult> InitiatePayment(MpesaPaymentRequest request)
@@ -51,7 +58,17 @@ public class PaymentService : IPaymentService
         if (response.IsSuccessStatusCode)
         {
             var mpesaResponse = JsonConvert.DeserializeObject<MpesaPaymentResponse>(responseString);
-            return new PaymentResult { Success = true, Message = mpesaResponse.CustomerMessage, TransactionId = mpesaResponse.CheckoutRequestID };
+
+            // save the initial payment record
+            await SaveInitialPaymentRecord(request, mpesaResponse.CheckoutRequestID);
+
+            return new PaymentResult
+            {
+                Success = true,
+                Message = mpesaResponse.CustomerMessage,
+                TransactionId = mpesaResponse.CheckoutRequestID,
+                MpesaTransactionId = mpesaResponse.MpesaReceiptNumber  // Set the M-Pesa transaction ID
+            };
         }
         else
         {
@@ -100,6 +117,113 @@ public class PaymentService : IPaymentService
         }
     }
 
+    private async Task SaveInitialPaymentRecord(MpesaPaymentRequest request, string checkoutRequestId)
+    {
+        var payment = new Payment
+        {
+           LeaseId = request.LeaseId,
+           PropertyId = request.PropertyId,
+           TenantId = request.TenantId,
+           Amount = request.Amount,
+           PaymentDate = DateTime.UtcNow,
+           TransactionId = checkoutRequestId,
+           Status = "Pending",
+           CreatedAt = DateTime.UtcNow,
+           Notes = "Initial payment record",
+           PaymentMethod = "M-Pesa"
+        };
+
+        _context.Payments.Add(payment);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<PaymentResult> InitiateCashPayment(CashPaymentRequest request)
+    {
+        var payment = new Payment
+        {
+            LeaseId = request.LeaseId,
+            PropertyId = request.PropertyId,
+            TenantId = request.TenantId,
+            Amount = request.Amount,
+            PaymentDate = DateTime.UtcNow,
+            TransactionId = Guid.NewGuid().ToString(), // Generate a unique ID for cash payments
+            Status = "Completed", // Cash payments are typically completed immediately
+            CreatedAt = DateTime.UtcNow,
+            Notes = "Cash payment",
+            PaymentMethod = "Cash"
+        };
+
+        _context.Payments.Add(payment);
+        await _context.SaveChangesAsync();
+
+        return new PaymentResult { Success = true, Message = "Cash payment recorded successfully", TransactionId = payment.TransactionId };
+    }
+
+    public async Task<bool> HandleMpesaCallbackAsync(MpesaCallbackDto callbackData)
+    {
+        var payment = await _context.Payments
+            .FirstOrDefaultAsync(p => p.TransactionId == callbackData.CheckoutRequestID);
+
+        if (payment == null)
+        {
+            _logger.LogWarning("Received callback for unknown payment: {CheckoutRequestID}", callbackData.CheckoutRequestID);
+            return false;
+        }
+
+        payment.Status = callbackData.ResultCode == "0" ? "Completed" : "Failed";
+        payment.LastUpdated = DateTime.UtcNow;
+        payment.MpesaTransactionId = callbackData.MpesaReceiptNumber;  // Set the M-Pesa transaction ID
+        payment.Notes = $"M-Pesa Receipt: {callbackData.MpesaReceiptNumber}";
+
+        await _context.SaveChangesAsync();
+
+        if (payment.Status == "Completed")
+        {
+            await NotifyPaymentSuccess(payment);
+        }
+
+        return true;
+    }
+
+    private async Task NotifyPaymentSuccess(Payment payment)
+    {
+        var tenant = await _context.Users.FindAsync(payment.TenantId);
+        var property = await _context.Properties.Include(p => p.Landlord).FirstOrDefaultAsync(p => p.Id == payment.PropertyId);
+        var admins = await _context.Users.Where(u => u.Role == "Admin").ToListAsync();
+
+        if (tenant != null)
+        {
+            await _notificationService.CreateGeneralNotificationAsync(new NotificationDto
+            {
+                UserId = tenant.Id,
+                Title = "Payment Successful",
+                Message = $"Your payment of {payment.Amount} was successful. M-Pesa Receipt: {payment.Notes.Replace("M-Pesa Receipt: ", "")}",
+                Type = "PaymentConfirmation"
+            });
+        }
+
+        if (property?.Landlord != null)
+        {
+            await _notificationService.CreateGeneralNotificationAsync(new NotificationDto
+            {
+                UserId = property.Landlord.Id,
+                Title = "Payment Received",
+                Message = $"Payment of {payment.Amount} received for property {property.Name}. M-Pesa Receipt: {payment.Notes.Replace("M-Pesa Receipt: ", "")}",
+                Type = "PaymentConfirmation"
+            });
+        }
+
+        foreach (var admin in admins)
+        {
+            await _notificationService.CreateGeneralNotificationAsync(new NotificationDto
+            {
+                UserId = admin.Id,
+                Title = "New Payment Processed",
+                Message = $"A payment of {payment.Amount} has been processed for property ID {payment.PropertyId}. M-Pesa Receipt: {payment.Notes.Replace("M-Pesa Receipt: ", "")}",
+                Type = "PaymentConfirmation"
+            });
+        }
+    }
     private object CreateMpesaPaymentRequest(MpesaPaymentRequest request)
     {
         var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
@@ -124,12 +248,55 @@ public class PaymentService : IPaymentService
     }
 
 
+    public async Task<Payment> GetPaymentByTransactionIdAsync(string transactionId)
+    {
+        return await _context.Payments
+            .FirstOrDefaultAsync(p => p.TransactionId == transactionId);
+    }
 
-public class MpesaPaymentResponse
+    public async Task<IEnumerable<object>> GetSuccessfulPaymentsForAdmin()
+    {
+        return await _context.Payments
+            .Where(p => p.Status == "Completed")
+            .Select(p => new
+            {
+                MpesaCode = p.Notes.Replace("M-Pesa Receipt: ", ""),
+                Amount = p.Amount,
+                Date = p.PaymentDate
+            })
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<object>> GetSuccessfulPaymentsForLandlord(string landlordId, int propertyId)
+    {
+        return await _context.Payments
+            .Where(p => p.Property.LandlordId == landlordId && p.PropertyId == propertyId && p.Status == "Completed")
+            .Select(p => new
+            {
+                MpesaCode = p.Notes.Replace("M-Pesa Receipt: ", ""),
+                Amount = p.Amount,
+                Date = p.PaymentDate
+            })
+            .OrderByDescending(p => p.Date)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Payment>> GetPaymentsForTenantAsync(string tenantId)
+    {
+        return await _context.Payments
+            .Where(p => p.Status == "Completed" && p.TenantId == tenantId)
+            .OrderByDescending(p => p.PaymentDate)
+            .ToListAsync();
+    }
+
+
+
+    public class MpesaPaymentResponse
     {
         public string CheckoutRequestID { get; set; }
         public string CustomerMessage { get; set; }
         public string MerchantRequestID { get; set; }
+        public string MpesaReceiptNumber { get; set; }
     }
 
     public class MpesaTokenResponse
